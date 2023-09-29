@@ -12,7 +12,6 @@ public:
 
 private:
     void setEffort(int effort, bool clockwise);
-    static void isr();
     static void isrA();
     static void isrB();
     const int tolerance = 3;
