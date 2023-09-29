@@ -58,7 +58,8 @@ void loop()
   }
     
   motor.setEffort(0);
-  motor.moveTo(50, true);
-  motor.setEffort(0);
-  motor.moveTo(50, false);
+  motor.moveTo(50, 45, true);
+  motor.moveTo(50, 45, true);
+  motor.moveTo(50, 25, true);
+  motor.moveTo(50, 25, true);
 }
