@@ -89,28 +89,13 @@ void BlueMotor::setEffortDB(int effort, int degree, bool clockwise)
 {
     // forearm
     OCR1C = constrain(effort, 0, 400);
-    if (clockwise)
-    {
-        while(clockwise) {
-            digitalWrite(AIN1, HIGH);
-            digitalWrite(AIN2, LOW);
-            driveTimer.reset(540*degree);
-            if(driverTimer.isExpired()) {
-                stop();
-                clockwise = false;
-            }
-        }
-    }
-    else
-    {
-        while(!clockwise) {
-            digitalWrite(AIN1, LOW);
-            digitalWrite(AIN2, HIGH);
-            driveTimer.reset(540*degree);
-            if(driverTimer.isExpired()) {
-                stop();
-                clockwise = true;
-            }
+    while(clockwise) {
+        digitalWrite(AIN1, HIGH);
+        digitalWrite(AIN2, LOW);
+        driveTimer.reset(540*degree);
+        if(driverTimer.isExpired()) {
+            stop();
+            clockwise = false;
         }
     }
     
@@ -166,28 +151,13 @@ void BlueMotor::setEffortWithoutDB(int effort, int degree, bool clockwise)
 {
     // forearm
     OCR1C = constrain(effort, 0, 400);
-    if (clockwise)
-    {
-        while(clockwise) {
-            digitalWrite(AIN1, HIGH);
-            digitalWrite(AIN2, LOW);
-            driveTimer.reset(540*degree);
-            if(driverTimer.isExpired()) {
-                stop();
-                clockwise = false;
-            }
-        }
-    }
-    else
-    {
-        while(!clockwise) {
-            digitalWrite(AIN1, LOW);
-            digitalWrite(AIN2, HIGH);
-            driveTimer.reset(540*degree);
-            if(driverTimer.isExpired()) {
-                stop();
-                clockwise = true;
-            }
+    while(clockwise) {
+        digitalWrite(AIN1, HIGH);
+        digitalWrite(AIN2, LOW);
+        driveTimer.reset(540*degree);
+        if(driverTimer.isExpired()) {
+            stop();
+            clockwise = false;
         }
     }
     
