@@ -217,28 +217,15 @@ void BlueMotor::moveTo(long target, int degree, bool clockwise)  //Move to this 
     float kp = 1;
     float effort = kp * (target - tolerance);
 
-    if(true) {
-        if(abs((getPosition() - target) < tolerance) || abs((getPosition() - target) > tolerance)) {
-            setEffortDB(effort, degree, clockwise);
-            sweep(target);
-            setEffortWithoutDB(effort, degree, clockwise);
-            sweep(target);
-        } else {
-            stop();
-            delay(10000);
-            break;
-        }
+    if(abs((getPosition() - target) < tolerance) || abs((getPosition() - target) > tolerance)) {
+        setEffortDB(effort, degree, clockwise);
+        sweep(target);
+        setEffortWithoutDB(effort, degree, clockwise);
+        sweep(target);
     } else {
-        if((abs(getPosition() - target) < tolerance) || (abs(getPosition() - target) > tolerance)) {
-            setEffortDB(effort, degree, clockwise);
-            sweep(target);
-            setEffortWithoutDB(effort, degree, clockwise);
-            sweep(target);
-        } else {
-            stop();
-            delay(10000);
-            break;
-        }
+        stop();
+        delay(10000);
+        break;
     }
     setEffort(0);
 }
