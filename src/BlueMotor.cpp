@@ -220,9 +220,9 @@ void BlueMotor::moveTo(long target, int degree, bool clockwise)  //Move to this 
     if(true) {
         if(abs((getPosition() - target) < tolerance) || abs((getPosition() - target) > tolerance)) {
             setEffortDB(effort, degree, clockwise);
-            sweep(effort);
+            sweep(target);
             setEffortWithoutDB(effort, degree, clockwise);
-            sweep(effort);
+            sweep(target);
         } else {
             stop();
             delay(10000);
@@ -231,9 +231,9 @@ void BlueMotor::moveTo(long target, int degree, bool clockwise)  //Move to this 
     } else {
         if((abs(getPosition() - target) < tolerance) || (abs(getPosition() - target) > tolerance)) {
             setEffortDB(effort, degree, clockwise);
-            sweep(effort);
+            sweep(target);
             setEffortWithoutDB(effort, degree, clockwise);
-            sweep(effort);
+            sweep(target);
         } else {
             stop();
             delay(10000);
