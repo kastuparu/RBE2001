@@ -103,6 +103,7 @@ void BlueMotor::setEffort(int effort, int degree, bool clockwise)
 void BlueMotor::setEffortWithoutDB(int effort, int degree, bool clockwise)
 {
     // deadband with Encoder A
+    clockwise = true;
     OCR1C = constrain(effort, 0, 400);
     int finalCount = 0;
     
@@ -174,11 +175,24 @@ void BlueMotor::moveTo(long target, int degree, bool clockwise)  //Move to this 
                                      //then stop
     float kp = 1;
     float effort = kp * (target - tolerance);
-    int attempt = 1;
+
+    
 
     if(abs((getPosition() - target) < tolerance) || abs((getPosition() - target) > tolerance)) {
-        setEffort(effort, degree, clockwise);
-        setEffortWithoutDB(effort, degree, clockwise);
+        switch(clockwise)
+        {
+        case true:
+          setEffort(effort, degree, clockwise);
+        break;
+
+        case false:
+          setEffortWithoutDB(effort, degree, clockwise);
+        break;
+
+        default:
+          stop();
+        }
+        
     } else {
         sweep(finalCount);
         finalCount = 0;
