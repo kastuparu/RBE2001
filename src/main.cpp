@@ -4,6 +4,7 @@
 
 
 BlueMotor motor;
+Servo servo;
 Romi32U4ButtonB buttonB;
 long timeToPrint = 0;
 long now = 0;
@@ -58,6 +59,10 @@ void loop()
   }
     
   motor.setEffort(0);
-  motor.moveTo(50, 45, true);
-  motor.moveTo(50, 25, true);
+  motor.moveTo(200, 45, true);
+  servo.setGripperDB();
+  motor.moveTo(200, 45, true);
+  motor.moveTo(111, 25, true);
+  servo.setGripperDB();
+  motor.moveTo(111, 25, true);
 }
