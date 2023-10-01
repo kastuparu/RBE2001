@@ -4,14 +4,13 @@ class BlueMotor
 {
 public:
     BlueMotor();
-    void setEffort(int effort);
-    void moveTo(long position);
+    void setEffort(int effort, int degree, bool clockwise);
+    void moveTo(long position, int degree, bool clockwise);
     long getPosition();
     void reset();
     void setup();
 
 private:
-    void setEffort(int effort, bool clockwise);
     static void isrA();
     static void isrB();
     const int tolerance = 3;
