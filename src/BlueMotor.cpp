@@ -9,6 +9,7 @@ long oldValue = 0;
 long newValue;
 long volatile count = 0;
 unsigned time = 0;
+long finalCount = 0;
 Timer forearmTimer(delay);
 
 BlueMotor::BlueMotor()
@@ -73,7 +74,6 @@ void BlueMotor::setEffort(int effort, int degree, bool clockwise)
 {
     // deadband with Encoder A
     OCR1C = constrain(effort, 0, 400);
-    int finalCount = 0;
 
     while(clockwise) {
         digitalWrite(AIN1, HIGH);
@@ -97,9 +97,7 @@ void BlueMotor::setEffort(int effort, int degree, bool clockwise)
         clockwise = false;       
     }
 
-    sweep(finalCount);
     reset();
-    finalCount = 0;
 }
 
 void BlueMotor::setEffortWithoutDB(int effort, int degree, bool clockwise)
@@ -153,9 +151,7 @@ void BlueMotor::setEffortWithoutDB(int effort, int degree, bool clockwise)
         clockwise = true;
     }
 
-    sweep(finalCount);
     reset();
-    finalCount = 0;
 }
 
 void stop()
@@ -178,11 +174,14 @@ void BlueMotor::moveTo(long target, int degree, bool clockwise)  //Move to this 
                                      //then stop
     float kp = 1;
     float effort = kp * (target - tolerance);
+    int attempt = 1;
 
     if(abs((getPosition() - target) < tolerance) || abs((getPosition() - target) > tolerance)) {
         setEffort(effort, degree, clockwise);
         setEffortWithoutDB(effort, degree, clockwise);
     } else {
+        sweep(finalCount);
+        finalCount = 0;
         stop();
         delay(10000);
     }
