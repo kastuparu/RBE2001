@@ -57,7 +57,8 @@ void loop()
       }
     }
   }
-    
+
+  // first trial
   motor.setEffort(0);
   motor.moveTo(200, 45, true);
   servo.setGripperDB();
@@ -65,4 +66,13 @@ void loop()
   motor.moveTo(111, 25, true);
   servo.setGripperDB();
   motor.moveTo(111, 25, true);
+
+  // second trial
+  motor.setEffort(0);
+  motor.moveTo(200, 45, false);
+  servo.setGripperDB();
+  motor.moveTo(200, 45, false);
+  motor.moveTo(111, 25, false);
+  servo.setGripperDB();
+  motor.moveTo(111, 25, false);
 }
