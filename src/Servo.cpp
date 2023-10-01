@@ -2,6 +2,8 @@
 #include <BlueMotor.h>
 #include <Romi32U4.h>
 #include <Timer.h>
+#include <servo32U4.h>
+Romi32U4ButtonB buttonB;
 
 Arduino: initialize
 
@@ -9,6 +11,18 @@ long oldValue = 0;
 long newValue;
 long volatile count = 0;
 unsigned time = 0;
+
+int linearPotPin = 18;
+int servoStop = 1480;
+int sevroJawDown = 1300;
+int servoJawUp = 1700;
+int printDelay = 500;
+int linearPotVoltageADC = 500;
+int jawOpenPotVoltageADC = 600;
+int jawClosedPotVoltageADC = 940;
+
+Servo32U4 jawServo;
+Timer printTimer(delay);
 Timer forearmTimer(delay);
 
 BlueMotor::BlueMotor()
@@ -31,6 +45,8 @@ void BlueMotor::setup()
     attachInterrupt(digitalPinToInterrupt(ENCB), isrA(), CHANGE);
     attachInterrupt(digitalPinToInterrupt(ENCA), isrB(), CHANGE);
     attachInterrupt(digitalPinToInterrupt(ENCB), isrB(), CHANGE);
+
+    jawServo.attach();
     reset();
 }
 
@@ -69,127 +85,89 @@ void BlueMotor::isrB()
     }
 }
 
-void BlueMotor::setEffort(int effort, int degree, bool clockwise)
+void BlueMotor::setEffortDB(int effort, int degree, bool clockwise)
 {
-    // deadband with Encoder A
+    // forearm
     OCR1C = constrain(effort, 0, 400);
-    int finalCount = 0;
-
     while(clockwise) {
         digitalWrite(AIN1, HIGH);
         digitalWrite(AIN2, LOW);
-        
         driveTimer.reset(540*degree);
-        while(effort < 401) {
-            for(ini i = 0; i < 401; i++) {
-                Serial.println("Effort: " + effort);
-                Serial.println("Encoder Count: " + analogRead(ENCA));
-                effort = effort + i;
-
-                if(driverTimer.isExpired()) {
-                    finalCount = i;
-                    stop();
-                    break;
-                }
-            }
-            break;
+        if(driverTimer.isExpired()) {
+            stop();
+            clockwise = false;
         }
-        clockwise = false;       
+    }
+    
+    // gripper
+    jawServo.writeMircoSeconds(servoJawDown);
+
+    while(linearPotVoltageADC > jawOpenPotVoltageADC)
+    {
+        linearPotVoltageADC = analog(linearPotPin);
+        if(printTimer.isExpired()) {
+            println("linearPotVoltageADC: ");
+            println(linearPotVoltageADC);
+        }
     }
 
-    sweep(finalCount);
-    reset();
-    finalCount = 0;
+    jawServo.writeMircoSeconds(servoStop);
+    linearPotVoltageADC = analog(linearPotPin);
+    println("Final voltage before delay: ");
+    println(linearPotVoltageADC);
+    delay(5000);
+
+    linearPotVoltageADC = analog(linearPotPin);
+    println("Final voltage after delay: ");
+    println(linearPotVoltageADC);
+    delay(5000);
+    
+
+    jawServo.writeMircoSeconds(servoJawUp);
+
+    println("");
+    while(linearPotVoltageADC < jawOpenPotVoltageADC)
+    {
+        linearPotVoltageADC = analog(linearPotPin);
+        if(printTimer.isExpired()) {
+            println("linearPotVoltageADC: ");
+            println(linearPotVoltageADC);
+        }
+    }
+
+    jawServo.writeMircoSeconds(servoStop);
+    linearPotVoltageADC = analog(linearPotPin);
+    println("Final voltage before delay: ");
+    println(linearPotVoltageADC);
+    delay(5000);
+
+    linearPotVoltageADC = analog(linearPotPin);
+    println("Final voltage after delay: ");
+    println(linearPotVoltageADC);
+    delay(5000);
 }
 
 void BlueMotor::setEffortWithoutDB(int effort, int degree, bool clockwise)
 {
-    // deadband with Encoder A
+    // forearm
     OCR1C = constrain(effort, 0, 400);
-    int finalCount = 0;
-    
     while(clockwise) {
         digitalWrite(AIN1, HIGH);
         digitalWrite(AIN2, LOW);
-        
         driveTimer.reset(540*degree);
-        while(effort < 401) {
-            for(ini i = 0; i < 401; i++) {
-                Serial.println("Effort: " + effort);
-                Serial.println("Encoder Count: " + analogRead(ENCA));
-                effort = effort + i;
-
-                if(driverTimer.isExpired()) {
-                    stop();
-                    break;
-                }
-            }
-            break;
+        if(driverTimer.isExpired()) {
+            stop();
+            clockwise = false;
         }
-        clockwise = false;
     }
-
-    // deadband with Encoder B
-    OCR1C = constrain(effort, -400, 0);
-    while(!clockwise) {
-        digitalWrite(AIN1, LOW);
-        digitalWrite(AIN2, HIGH);
-        
-        driveTimer.reset(540*degree);
-        while(effort > -401) {
-            for(ini i = 0; i > -401; i--) {
-                Serial.println("Effort: " + effort);
-                Serial.println("Encoder Count: " + analogRead(ENCB));
-                effort = effort + i;
-
-                if(driverTimer.isExpired()) {
-                    finalCount = 401 + i;
-                    stop();
-                    break;
-                }
-            }
-            break;
-        }
-        clockwise = true;
-    }
-
-    sweep(finalCount);
-    reset();
-    finalCount = 0;
+    
+    // gripper
+    jawServo.writeMircoSeconds(servoJawDown);
+    jawServo.writeMircoSeconds(servoStop);
+    jawServo.writeMircoSeconds(servoJawUp);
+    jawServo.writeMircoSeconds(servoStop);
 }
 
-void stop()
-{
-    digitalWrite(PWMA, LOW);
-}
-
-void sweep(int target)
-{
-    for (int i = 0; i < target; i++) {
-        digitalWrite(AIN1, LOW);
-        digitalWrite(AIN2, HIGH);
-        OCR1C = i;
-        delay(10);
-    }
-}
-
-void BlueMotor::moveTo(long target, int degree, bool clockwise)  //Move to this encoder position within the specified
-{                                    //tolerance in the header file using proportional control
-                                     //then stop
-    float kp = 1;
-    float effort = kp * (target - tolerance);
-
-    if(abs((getPosition() - target) < tolerance) || abs((getPosition() - target) > tolerance)) {
-        setEffort(effort, degree, clockwise);
-        setEffortWithoutDB(effort, degree, clockwise);
-    } else {
-        stop();
-        delay(10000);
-    }
-    setEffort(0);
-}
-
-/*
 void BlueMotor::setEffort(int effort)
 {
     if (effort < 0)
@@ -217,6 +195,41 @@ void BlueMotor::setEffort(int effort, bool clockwise)
     OCR1C = constrain(effort, 0, 400);
 }
 
+void stop()
+{
+    digitalWrite(PWMA, LOW);
+}
+
+void sweep(int position)
+{
+    digitalWrite(AIN1, LOW);
+    digitalWrite(AIN2, HIGH);
+    for (int i = 0; i < position; i++)
+    {
+        OCR1C = i;
+        delay(10);
+    }
+}
+
+void BlueMotor::moveTo(long target, int degree, bool clockwise)  //Move to this encoder position within the specified
+{                                    //tolerance in the header file using proportional control
+                                     //then stop
+    float kp = 1;
+    float effort = kp * (target - tolerance);
+
+    if(abs((getPosition() - target) < tolerance) || abs((getPosition() - target) > tolerance)) {
+        setEffortDB(effort, degree, clockwise);
+        sweep(target);
+        setEffortWithoutDB(effort, degree, clockwise);
+        sweep(target);
+    } else {
+        stop();
+        delay(10000);
+        break;
+    }
+    setEffort(0);
+}
+
 void BlueMotor::moveTo(long target)  //Move to this encoder position within the specified
 {                                    //tolerance in the header file using proportional control
                                      //then stop
@@ -230,6 +243,4 @@ void BlueMotor::moveTo(long target)  //Move to this encoder position within the 
     else {
         setEffort(0);
     }
- }   
-*/
-
+}
