@@ -1,23 +1,20 @@
 #pragma once
 
-class BlueMotor
+class Servo
 {
 public:
-    BlueMotor();
-    void setEffort(int effort);
-    void moveTo(long position);
-    long getPosition();
-    void reset();
+    Servo();
+    void setGripper();
+    void setGripperDB();
     void setup();
 
 private:
-    void setEffort(int effort, bool clockwise);
-    static void isrA();
-    static void isrB();
-    const int tolerance = 3;
-    const int PWMOutPin = 11;
-    const int AIN2 = 4;
-    const int AIN1 = 13;
-    static const int ENCA = 0;
-    static const int ENCB = 1;
+    const int linearPotPin = 18;
+    const int servoStop = 1480;
+    const int sevroJawDown = 1300;
+    const int servoJawUp = 1700;
+    const int printDelay = 500;
+    const int linearPotVoltageADC = 500;
+    const int jawOpenPotVoltageADC = 600;
+    const int jawClosedPotVoltageADC = 940;
 };
