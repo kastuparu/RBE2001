@@ -29,9 +29,9 @@ void BlueMotor::setup()
 }
 
 /**
- * @brief 
+ * @brief Get the encoder count.
  * 
- * @return long 
+ * @return long the encoder count.
  */
 long BlueMotor::getPosition()
 {
@@ -42,6 +42,10 @@ long BlueMotor::getPosition()
     return tempCount;
 }
 
+/**
+ * @brief Reset the encoder count.
+ * 
+ */
 void BlueMotor::reset()
 {
     noInterrupts();
@@ -49,6 +53,10 @@ void BlueMotor::reset()
     interrupts();
 }
 
+/**
+ * @brief Interrupt service routine (ISR) for encoder A.
+ * 
+ */
 void BlueMotor::isrA()
 {
     if (digitalRead(ENCB) == digitalRead(ENCA)) {
@@ -58,6 +66,11 @@ void BlueMotor::isrA()
         count--;
     }
 }
+
+/**
+ * @brief Interrupt service routine (ISR) for encoder B.
+ * 
+ */
 void BlueMotor::isrB()
 {
     if (digitalRead(ENCA) == digitalRead(ENCB)) {
@@ -68,6 +81,16 @@ void BlueMotor::isrB()
     }
 }
 
+/**
+ * @brief Set the motor effort (without dead band correction).
+ * Set the effort to 400 to lift the fourbar with maximum speed.
+ * Set the effort to values between 0 and 400 to lift the fourbar.
+ * Set the effort to 0 to stop the motor.
+ * Set the effort to values between 0 and -400 to lower the fourbar.
+ * Set the effort to -400 to lower the fourbar with maximum speed.
+ * 
+ * @param effort the effort, between -400 and 400.
+ */
 void BlueMotor::setEffort(int effort)
 {
     if (effort < 0)
@@ -76,6 +99,13 @@ void BlueMotor::setEffort(int effort)
         setEffort(effort, false);
 }
 
+/**
+ * @brief Set the motor effort (without dead band correction).
+ * Used by the public setEffort() method to control direction.
+ * 
+ * @param effort the effort, between 0 and 400.
+ * @param clockwise true for negative effort or lowering the fourbar, false for positive effort or lifting the fourbar.
+ */
 void BlueMotor::setEffort(int effort, bool clockwise)
 {
     if (clockwise)
@@ -91,33 +121,58 @@ void BlueMotor::setEffort(int effort, bool clockwise)
     OCR1C = constrain(effort, 0, 400);
 }
 
+/**
+ * @brief Set the motor effort with dead band correction.
+ * Removing dead band is useful for proportional control.
+ * The effort where the dead band ends for lifting the fourbar (CCW) is 229.
+ * The effort where the dead band ends for lowering the fourbar (CW) is -184.
+ * 
+ * Set the effort to 400 to lift the fourbar with maximum speed.
+ * Set the effort to values between 0 and 400 to lift the fourbar.
+ * Set the effort to 0 to stop the motor.
+ * Set the effort to values between 0 and -400 to lower the fourbar.
+ * Set the effort to -400 to lower the fourbar with maximum speed.
+ * 
+ * @param effort the effort, between 0 and 400.
+ * @return int 
+ */
 int BlueMotor::setEffortWithoutDB(int effort)
 {
     int effortAdjusted;
     if (effort < 0)
     {
-        effortAdjusted = deadBandCW + effort * 1.0 / maxEffort * (maxEffort + deadBandCW);
+        effortAdjusted = DEAD_BAND_CW + effort * 1.0 / EFFORT_MAX * (EFFORT_MAX + DEAD_BAND_CW);
         setEffort(-effortAdjusted, true);
     }
     else
     {
-        effortAdjusted = deadBandCCW + effort * 1.0 / maxEffort * (maxEffort - deadBandCCW);
+        effortAdjusted = DEAD_BAND_CCW + effort * 1.0 / EFFORT_MAX * (EFFORT_MAX - DEAD_BAND_CCW);
         setEffort(effortAdjusted, false);
     }
     return effortAdjusted;
 }
 
-void BlueMotor::moveTo(long target)  //Move to this encoder position within the specified
-{                                    //tolerance in the header file using proportional control
-                                     //then stop
-    float kp = 1;
+/**
+ * @brief Move the motor to a target position using proportional control.
+ * This method is non-blocking. Call this method in a loop to move to the target position.
+ * There is a tolerance of 3 encoder counts.
+ * 
+ * @param target the target encoder count.
+ * @return true if the motor is finished moving.
+ * @return false if the motor is not finished moving.
+ */
+bool BlueMotor::moveTo(long target)
+{                                    
+    float kp = 0.4;
     long currentPos = getPosition();
 
     if (abs(currentPos - target) > tolerance) {
-        float effort = kp * (target - tolerance);
-        setEffort(effort);
+        float effort = kp * (target - currentPos);
+        setEffortWithoutDB(effort);
+        return false;
     }
     else {
         setEffort(0);
+        return true;
     }
 }
