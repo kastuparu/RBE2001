@@ -1,134 +1,177 @@
 #include <Arduino.h>
 #include <Romi32U4.h>
-#include "BlueMotor.h"
+#include <Timer.h>
+#include <IRdecoder.h>
+#include "RemoteConstants.h"
+
+#include "Fourbar.h"
+#include "Drivetrain.h"
 #include "BottomOutGripper.h"
-#include "Timer.h"
+#include "states.h"
 
-BlueMotor motor;
+const int IR_REMOTE_PIN = 14;
+
+int irReading;
+
+Fourbar fourbar;
+Drivetrain drivetrain;
 BottomOutGripper gripper;
-Romi32U4ButtonA buttonA;
-Romi32U4ButtonB buttonB;
-Romi32U4ButtonC buttonC;
-Timer timer(500);
-bool closed = true;
+IRDecoder decoder(IR_REMOTE_PIN);
 
-void platform();
-void roof25Degrees();
-void roof45Degrees();
+StateRobot1 state = PREP_ROOF_REMOVAL;
+
+void stateMachine();
+bool getFinished();
+void switchState(StateRobot1 state);
+void togglePause();
 
 void setup()
 {
-    // hardware: set fourbar to platform position so that encoders are zeroed
-
     Serial.begin(9600);
-    motor.setup();
-    motor.reset();
+    // hardware: set fourbar to platform position so that encoders are zeroed
+    fourbar.setup();
+    drivetrain.setup();
     gripper.setup();
+    decoder.init();
 }
 
 void loop()
 {
-    // note: the methods platform(), roof25Degrees(), and roof45Degrees() are blocking for now, just to get the code working
-
-    if (buttonA.isPressed())
-        platform();
-    if (buttonB.isPressed())
-        roof25Degrees();
-    if (buttonC.isPressed())
-        roof45Degrees();
-
-    
+    stateMachine();
 }
 
-void platform()
+void stateMachine()
 {
-    // places and removes a solar collector panel on the staging platform
+    irReading = decoder.getKeyCode();
+    if (irReading == REMOTE_PLAY_PAUSE)
+        togglePause();
 
-    while (motor.getPosition() > 0)
-        motor.moveTo(0);
-    motor.setEffort(0);
+    fourbar.stateMachine();
+    drivetrain.stateMachine();
 
-    delay(200);
-
-    gripper.close();
-
-    delay(200);
-
-    while (motor.getPosition() < 1000)
-        motor.moveTo(1000);
-    motor.setEffort(0);
-
-    delay(200);
-
-    while (motor.getPosition() > 0)
-        motor.moveTo(0);
-    motor.setEffort(0);
-
-    delay(200);
-
-    gripper.open();
-
-    delay(200);
+    switch (state)
+    {
+        case PREP_ROOF_REMOVAL:
+            gripper.open();
+            if (getFinished())
+                switchState(GRIP_ROOF_PANEL);
+            break;
+        case GRIP_ROOF_PANEL:
+            if (getFinished())
+                gripper.close();
+            if (getFinished() && irReading == REMOTE_CONTINUE)
+                switchState(REMOVE_ROOF_PANEL);
+            break;
+        case REMOVE_ROOF_PANEL:
+            if (getFinished())
+                switchState(REMOVE_ROOF_PANEL_TURN);
+            break;
+        case REMOVE_ROOF_PANEL_TURN:
+            if (getFinished())
+                switchState(DRIVE_ROOF_TO_CROSS);
+            break;
+        case DRIVE_ROOF_TO_CROSS:
+            if (getFinished())
+                switchState(DRIVE_ROOF_TO_CROSS_2);
+            break;
+        case DRIVE_ROOF_TO_CROSS_2:
+            if (getFinished())
+                switchState(DRIVE_ROOF_TO_CROSS_3);
+            break;
+        case DRIVE_ROOF_TO_CROSS_3:
+            if (getFinished())
+                switchState(DRIVE_CROSS_TO_PLATFORM);
+            break;
+        case DRIVE_CROSS_TO_PLATFORM:
+            if (getFinished())
+                switchState(PLACE_PLATFORM_PANEL);
+            break;
+        case PLACE_PLATFORM_PANEL:
+            if (getFinished() && irReading == REMOTE_CONTINUE)
+                switchState(RELEASE_PLATFORM_PANEL);
+            break;
+        case RELEASE_PLATFORM_PANEL:
+            gripper.open();
+            if (getFinished() && irReading == REMOTE_CONTINUE)
+                switchState(GRIP_PLATFORM_PANEL);
+            break;
+        case GRIP_PLATFORM_PANEL:
+            gripper.close();
+            if (getFinished())
+                switchState(REMOVE_PLATFORM_PANEL);
+            break;
+        case REMOVE_PLATFORM_PANEL:
+            if (getFinished())
+                switchState(DRIVE_PLATFORM_TO_CROSS);
+            break;
+        case DRIVE_PLATFORM_TO_CROSS:
+            if (getFinished())
+                switchState(DRIVE_PLATFORM_TO_CROSS_2);
+            break;
+        case DRIVE_PLATFORM_TO_CROSS_2:
+            if (getFinished())
+                switchState(DRIVE_PLATFORM_TO_CROSS_3);
+            break;
+        case DRIVE_PLATFORM_TO_CROSS_3:
+            if (getFinished())
+                switchState(DRIVE_CROSS_TO_ROOF);
+            break;
+        case DRIVE_CROSS_TO_ROOF:
+            if (getFinished())
+                switchState(PLACE_ROOF_PANEL);
+            break;
+        case PLACE_ROOF_PANEL:
+            if (getFinished() && irReading == REMOTE_CONTINUE)
+                switchState(RELEASE_ROOF_PANEL);
+            break;
+        case RELEASE_ROOF_PANEL:
+            gripper.open();
+            if (getFinished())
+                switchState(RELEASE_ROOF_PANEL_TURN);
+            break;
+        case RELEASE_ROOF_PANEL_TURN:
+            if (getFinished())
+                switchState(DRIVE_2_ROOF_TO_CROSS);
+            break;
+        case DRIVE_2_ROOF_TO_CROSS:
+            if (getFinished())
+                switchState(DRIVE_2_ROOF_TO_CROSS_2);
+            break;
+        case DRIVE_2_ROOF_TO_CROSS_2:
+            if (getFinished())
+                switchState(DRIVE_2_ROOF_TO_CROSS_3);
+            break;
+        case DRIVE_2_ROOF_TO_CROSS_3:
+            if (getFinished())
+                switchState(DRIVE_2_CROSS_TO_PLATFORM);
+            break;
+        case DRIVE_2_CROSS_TO_PLATFORM:
+            if (getFinished())
+                switchState(DRIVE_2_CROSS_TO_PLATFORM_TURN);
+            break;
+        case DRIVE_2_CROSS_TO_PLATFORM_TURN:
+            if (getFinished())
+                switchState(DRIVE_ACROSS_FIELD);
+            break;
+        case DRIVE_ACROSS_FIELD:
+            break;
+    }
 }
 
-void roof45Degrees()
+bool getFinished()
 {
-    // places and removes a solar collector panel on the 45 degree roof
-
-    while (motor.getPosition() < 3500)
-        motor.moveTo(3500);
-    motor.setEffort(0);
-
-    delay(200);
-
-    gripper.close();
-
-    delay(200);
-
-    while (motor.getPosition() < 5000)
-        motor.moveTo(5000);
-    motor.setEffort(0);
-
-    delay(200);
-
-    while (motor.getPosition() > 3500)
-        motor.moveTo(3500);
-    motor.setEffort(0);
-
-    delay(200);
-
-    gripper.open();
-
-    delay(200);
+    return fourbar.getFinished() && drivetrain.getFinished();
 }
 
-void roof25Degrees()
+void switchState(StateRobot1 newState)
 {
-    // places and removes a solar collector panel on the 25 degree roof
+    state = newState;
+    fourbar.switchState(newState);
+    drivetrain.switchState(newState);
+}
 
-    while (motor.getPosition() < 8000)
-        motor.moveTo(8000);
-    motor.setEffort(0);
-
-    delay(200);
-
-    gripper.close();
-
-    delay(200);
-
-    while (motor.getPosition() > 5500)
-        motor.moveTo(5500);
-    motor.setEffort(0);
-
-    delay(200);
-
-    while (motor.getPosition() < 8000)
-        motor.moveTo(8000);
-    motor.setEffort(0);
-
-    delay(200);
-
-    gripper.open();
-
-    delay(200);
+void togglePause()
+{
+    fourbar.togglePause();
+    drivetrain.togglePause();
 }
